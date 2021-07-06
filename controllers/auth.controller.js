@@ -20,6 +20,7 @@ class AuthController{
             const validate = validation.registerSchema.validate(request, {abortEarly: false})
             if (validate.error) {
                 return res.status(422).json({
+                    'success': false,
                     'messages': 'Validate error',
                     'error': validate.error.details
                 })
@@ -28,7 +29,8 @@ class AuthController{
             const validateEmail = await models.users.findOne({ where: { email: email } });
             if (validateEmail) {
                 return res.status(422).json({
-                    'messages': 'Validate error',
+                    'success': false,
+                    'message': 'Validate error',
                     'error': [{'message':'Email has already taken'}]
                 })
             }
@@ -43,15 +45,15 @@ class AuthController{
         
             if(user) {
                 return res.status(201).json({
-                    'status': 'OK',
+                    'success': true,
                     'messages': 'User created successfully'
                 });
             }
 
         } catch (error) {
             res.status(400).json({
-                'status': 'ERROR',
-                'messages': error.message
+                'success': false,
+                'message': error.message
             });
         }
     }
@@ -60,7 +62,6 @@ class AuthController{
     async login(req, res) {
         try {
             const {
-                name,
                 email,
                 password
             } = req.body
@@ -69,7 +70,8 @@ class AuthController{
             const validate = validation.loginSchema.validate(request, {abortEarly: false})
             if (validate.error) {
                 return res.status(422).json({
-                    'messages': 'Validate error',
+                    'success': false,
+                    'message': 'Validate error',
                     'error': validate.error.details
                 })
             }   
@@ -84,7 +86,7 @@ class AuthController{
             }
 
             var passwordIsValid = bcrypt.compareSync(
-                req.body.password,
+                password,
                 user.password
               );
         
@@ -107,9 +109,36 @@ class AuthController{
                 accessToken: token
             });
         } catch (error) {
-            res.status(400).json({
-                'status': 'ERROR',
-                'messages': error.message
+            return res.status(400).json({
+                'success': false,
+                'message': error.message
+            });
+        }
+    }
+
+    // PROFILE
+    async profile(req, res, next) {
+        try {
+            const user = await models.users.findOne({ 
+                where: { id: req.userId },
+                attributes: {
+                    exclude: ['password', 'updated_at']
+                }
+            });
+            if(!user) {
+                return res.status(404).json({
+                    'success': false,
+                    'messages': 'User not found'
+                });
+            }
+            return res.send({
+                'success': false,
+                'data': user
+            });
+        } catch (error) {
+            return res.status(400).json({
+                'success': false,
+                'message': error.message
             });
         }
     }
